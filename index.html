@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <title>InfoScope-DW - Your Browser & System Information</title>
     <!-- Google Font: Share Tech Mono -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -82,8 +83,13 @@
 
         .cards-container {
             display: grid;
+            display: -ms-grid; /* For IE support */
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            -ms-grid-columns: repeat(auto-fill, minmax(300px, 1fr)); /* For IE support */
             gap: 1.5rem;
+            grid-gap: 1.5rem; /* Fallback for older browsers */
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .card {
@@ -313,17 +319,28 @@
             color: var(--text-color) !important;
         }
 
-        @media (max-width: 768px) {
+        /* Responsive design for different screen sizes */
+        @media screen and (max-width: 768px) {
             .cards-container {
                 grid-template-columns: 1fr;
+                -ms-grid-columns: 1fr;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .card {
+                width: 100%;
+                margin-bottom: 1.5rem;
             }
 
             .info-item {
                 flex-direction: column;
+                align-items: flex-start;
             }
 
             .info-label {
                 margin-bottom: 0.25rem;
+                min-width: 100%;
             }
             
             .action-bar {
@@ -335,6 +352,30 @@
             .action-button {
                 width: 100%;
                 margin-bottom: 0.5rem;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+        
+        /* Fix for very small screens */
+        @media screen and (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .card-title {
+                font-size: 1.1rem;
+            }
+            
+            .container {
+                padding: 0 0.75rem;
+                margin: 1.5rem auto;
             }
         }
     </style>
@@ -1490,47 +1531,82 @@
         
         // Function to get timezone information
         function getTimezoneInfo() {
-            const date = new Date();
-            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const localTime = date.toLocaleTimeString();
-            const offset = -date.getTimezoneOffset() / 60;
-            const offsetStr = offset >= 0 ? `+${offset}` : `${offset}`;
-            
-            document.getElementById('timezone-info').textContent = 
-                `${timeZone} (UTC${offsetStr}), Current time: ${localTime}`;
+            try {
+                const date = new Date();
+                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown";
+                const localTime = date.toLocaleTimeString();
+                const offset = -date.getTimezoneOffset() / 60;
+                const offsetStr = offset >= 0 ? `+${offset}` : `${offset}`;
+                
+                document.getElementById('timezone-info').textContent = 
+                    `${timeZone} (UTC${offsetStr}), Current time: ${localTime}`;
+                    
+                // Update timezone info every minute
+                setTimeout(getTimezoneInfo, 60000);
+            } catch (error) {
+                document.getElementById('timezone-info').textContent = 
+                    "Unable to detect timezone information";
+                console.error("Error getting timezone info:", error);
+            }
         }
         
         // Function to track mouse activity
         function trackMouseActivity() {
-            // Track mouse movements
-            document.addEventListener('mousemove', () => {
-                mouseMovements++;
+            try {
+                // Initialize the mouse activity display first
                 updateMouseActivity();
-            });
-            
-            // Track mouse clicks
-            document.addEventListener('click', () => {
-                mouseClicks++;
-                updateMouseActivity();
-            });
-            
-            // Track key presses
-            document.addEventListener('keydown', () => {
-                keyPresses++;
-                updateMouseActivity();
-            });
-            
-            // Track scroll events
-            document.addEventListener('scroll', () => {
-                scrollEvents++;
-                updateMouseActivity();
-            });
+                
+                // Throttle mouse movement tracking to avoid performance issues
+                let lastMouseUpdate = 0;
+                
+                // Track mouse movements with throttling
+                document.addEventListener('mousemove', (e) => {
+                    const now = Date.now();
+                    if (now - lastMouseUpdate > 100) { // Only update every 100ms
+                        mouseMovements++;
+                        lastMouseUpdate = now;
+                        updateMouseActivity();
+                    }
+                });
+                
+                // Track mouse clicks
+                document.addEventListener('click', () => {
+                    mouseClicks++;
+                    updateMouseActivity();
+                });
+                
+                // Track key presses
+                document.addEventListener('keydown', () => {
+                    keyPresses++;
+                    updateMouseActivity();
+                });
+                
+                // Track scroll events with throttling
+                let lastScrollUpdate = 0;
+                document.addEventListener('scroll', () => {
+                    const now = Date.now();
+                    if (now - lastScrollUpdate > 100) { // Only update every 100ms
+                        scrollEvents++;
+                        lastScrollUpdate = now;
+                        updateMouseActivity();
+                    }
+                });
+                
+                console.log("Mouse activity tracking initialized");
+            } catch (error) {
+                console.error("Error setting up mouse activity tracking:", error);
+                document.getElementById('mouse-activity').textContent = "Tracking unavailable";
+            }
         }
         
         // Function to update mouse activity display
         function updateMouseActivity() {
-            document.getElementById('mouse-activity').textContent = 
-                `${mouseMovements} movements, ${mouseClicks} clicks, ${keyPresses} key presses, ${scrollEvents} scrolls`;
+            try {
+                document.getElementById('mouse-activity').textContent = 
+                    `${mouseMovements} movements, ${mouseClicks} clicks, ${keyPresses} key presses, ${scrollEvents} scrolls`;
+            } catch (error) {
+                console.error("Error updating mouse activity display:", error);
+            }
         }
         
         // Utility function to format time in seconds to a readable string
@@ -1607,7 +1683,12 @@
         // Function to generate PDF report
         function generatePDF() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            // Create PDF with better default font
+            const doc = new jsPDF({
+                unit: 'mm',
+                orientation: 'portrait',
+                lineHeight: 1.5
+            });
             
             // Define color scheme to match website
             const primaryColor = [74, 109, 167]; // #4a6da7
@@ -1616,6 +1697,7 @@
             const textColor = [51, 51, 51]; // #333333
             const textLightColor = [102, 102, 102]; // #666666
             const borderColor = [229, 231, 235]; // #e5e7eb
+            const accentColor = [138, 180, 248]; // #8ab4f8
             
             // Add header background
             doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -1634,19 +1716,19 @@
             
             // Add title
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(24);
+            doc.setFontSize(28);
             doc.setTextColor(255, 255, 255); // White color for text on header
-            doc.text('InfoScope', 105, 18, { align: 'center' });
+            doc.text('InfoScope-DW', 105, 17, { align: 'center' });
             
             // Add subtitle
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(12);
-            doc.setTextColor(255, 255, 255, 0.9); // White with slight transparency
-            doc.text('System Information Report', 105, 26, { align: 'center' });
+            doc.setFontSize(13);
+            doc.setTextColor(255, 255, 255, 0.95); // White with slight transparency
+            doc.text('Comprehensive System & Browser Information Report', 105, 26, { align: 'center' });
             
             // Add date and time
-            doc.setFontSize(9);
-            doc.setTextColor(255, 255, 255, 0.8);
+            doc.setFontSize(10);
+            doc.setTextColor(255, 255, 255, 0.9);
             const currentDate = new Date().toLocaleString();
             doc.text(`Generated on: ${currentDate}`, 105, 34, { align: 'center' });
             
@@ -1832,18 +1914,18 @@
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(9);
             doc.setTextColor(textLightColor[0], textLightColor[1], textLightColor[2]);
-            doc.text('Generated by InfoScope • Your comprehensive browser and system information', 105, 282, { align: 'center' });
-            doc.text('© 2025 InfoScope. All rights reserved.', 105, 288, { align: 'center' });
+            doc.text('Generated by InfoScope-DW • Your comprehensive browser and system information', 105, 282, { align: 'center' });
+            doc.text('© 2025 InfoScope-DW. All rights reserved.', 105, 288, { align: 'center' });
             
             // Save the PDF
-            doc.save('InfoScope-System-Report.pdf');
+            doc.save('InfoScope-DW-System-Report.pdf');
         }
 
         // Function to generate plain text report
         function generateTextReport() {
             // Create the text report
             let textReport = "===============================================\n";
-            textReport += "                INFOSCOPE REPORT                  \n";
+            textReport += "              INFOSCOPE-DW REPORT                 \n";
             textReport += "===============================================\n\n";
             textReport += `Generated on: ${new Date().toLocaleString()}\n\n`;
             
@@ -1926,8 +2008,8 @@
             }
             
             textReport += "\n===============================================\n";
-            textReport += "Generated by InfoScope • Your comprehensive browser and system information\n";
-            textReport += "© 2025 InfoScope. All rights reserved.\n";
+            textReport += "Generated by InfoScope-DW • Your comprehensive browser and system information\n";
+            textReport += "© 2025 InfoScope-DW. All rights reserved.\n";
             
             // Create a Blob with the text content
             const blob = new Blob([textReport], { type: 'text/plain' });
@@ -1936,7 +2018,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'InfoScope-System-Report.txt';
+            a.download = 'InfoScope-DW-System-Report.txt';
             document.body.appendChild(a);
             a.click();
             
@@ -2085,7 +2167,7 @@
                 },
                 stroke: {
                     width: isDarkMode ? 2 : 1,
-                    colors: Array(6).fill('rgba(255, 255, 255, 0.7)')
+                    colors: isDarkMode ? Array(6).fill('rgba(255, 255, 255, 0.2)') : Array(6).fill('rgba(0, 0, 0, 0.1)')
                 },
                 dataLabels: {
                     style: {
@@ -2100,9 +2182,9 @@
                         foreColor: textColor,
                         borderRadius: 2,
                         padding: 4,
-                        opacity: 0.7,
+                        opacity: isDarkMode ? 0.7 : 0.5,
                         borderWidth: 1,
-                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'
                     }
                 },
                 responsive: [{
@@ -2334,6 +2416,10 @@
             
             // Update time on page counter
             updateTimeOnPage();
+            
+            // Initialize timezone and mouse activity tracking
+            getTimezoneInfo();
+            trackMouseActivity();
             
             // Initialize charts
             initializeCharts();
