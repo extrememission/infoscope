@@ -2477,7 +2477,7 @@
             
             // In real-world environments, create a mock list of browser tabs with unique IDs
             // In a real extension, we would get this from browser.tabs API
-            const browserTabs = [
+            globalBrowserTabs = [
                 {
                     id: 'tab-1',
                     title: currentTab.title,
@@ -2489,7 +2489,7 @@
             
             // Add some demo tabs if this is the only tab to show functionality
             if (Math.random() > 0.5) {
-                browserTabs.push(
+                globalBrowserTabs.push(
                     {
                         id: 'tab-2',
                         title: 'Search Results',
@@ -2521,7 +2521,7 @@
                     let cachePromises = [];
                     
                     // Process each browser tab and assign caches to them
-                    browserTabs.forEach(tab => {
+                    globalBrowserTabs.forEach(tab => {
                         // Determine which caches belong to this tab (in a real extension, 
                         // we would use more sophisticated matching)
                         // For demo purposes, we distribute caches among tabs
@@ -2653,7 +2653,7 @@
                                 <strong>Total Browser Cache:</strong> ${formatBytes(totalCacheSize)} across ${cacheNames.length} cache${cacheNames.length !== 1 ? 's' : ''}
                             </div>
                             <div style="margin-top: 0.5rem; font-size: 0.9rem;">
-                                <em>Showing ${browserTabs.length} browser tab${browserTabs.length !== 1 ? 's' : ''}</em>
+                                <em>Showing ${globalBrowserTabs.length} browser tab${globalBrowserTabs.length !== 1 ? 's' : ''}</em>
                             </div>
                         `;
                     }).catch(err => {
@@ -2700,6 +2700,9 @@
             }
         }
         
+        // Global variable to hold browser tabs
+        let globalBrowserTabs = [];
+        
         // Helper function to distribute caches among tabs
         function getCachesForTab(tab, allCacheNames) {
             // In a real extension with browser.tabs API, we could match
@@ -2730,7 +2733,7 @@
                 );
                 
                 // Or use modulo distribution for demo purposes
-                const indexMatch = (index % browserTabs.length) === (tabIndex % browserTabs.length);
+                const indexMatch = (index % globalBrowserTabs.length) === (tabIndex % globalBrowserTabs.length);
                 
                 return keywordMatch || indexMatch;
             });
