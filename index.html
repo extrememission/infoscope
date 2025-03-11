@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InfoScope - Your Browser & System Information</title>
+    <title>InfoScope-DW - Your Browser & System Information</title>
+    <!-- Google Font: Share Tech Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <!-- jsPDF library for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Chart.js for data visualization -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <style>
         :root {
             --primary-color: #4a6da7;
@@ -20,7 +22,7 @@
             --border-color: #e5e7eb;
             --success-color: #34c759;
             --danger-color: #ff3b30;
-            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --font-family: 'Share Tech Mono', monospace;
             --shimmer-bg: #f0f0f0;
             --shimmer-highlight: rgba(255, 255, 255, 0.8);
         }
@@ -197,6 +199,7 @@
             padding: 0.75rem 1.25rem;
             font-size: 1.1rem;
             font-weight: 500;
+            font-family: var(--font-family);
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
@@ -276,17 +279,38 @@
             margin-top: 1rem;
         }
         
-        /* Improve chart text contrast in dark mode */
-        [data-theme="dark"] .chart-container canvas {
-            filter: brightness(1.3); /* Increased brightness for better text legibility */
+        /* Make sure ApexCharts works well in dark mode */
+        [data-theme="dark"] .apexcharts-legend-text,
+        [data-theme="dark"] .apexcharts-text,
+        [data-theme="dark"] .apexcharts-title-text,
+        [data-theme="dark"] .apexcharts-legend-marker,
+        [data-theme="dark"] .apexcharts-tooltip-text,
+        [data-theme="dark"] .apexcharts-datalabel-label,
+        [data-theme="dark"] .apexcharts-datalabel-value {
+            fill: var(--text-color) !important;
+            color: var(--text-color) !important;
+            text-shadow: none !important;
         }
         
-        /* Ensure chart text is always visible */
-        [data-theme="dark"] .chart-js-tooltip {
-            color: #ffffff !important;
-            background-color: rgba(0, 0, 0, 0.8) !important;
+        /* Remove text shadows from all chart elements */
+        .apexcharts-text,
+        .apexcharts-legend-text,
+        .apexcharts-title-text,
+        .apexcharts-tooltip-text,
+        .apexcharts-datalabel-label,
+        .apexcharts-datalabel-value {
+            text-shadow: none !important;
+        }
+        
+        /* Ensure ApexCharts tooltip has good contrast in dark mode */
+        [data-theme="dark"] .apexcharts-tooltip {
+            background-color: rgba(30, 30, 30, 0.95) !important;
             border-color: var(--accent-color) !important;
-            font-weight: bold !important;
+        }
+        
+        /* Ensure chart containers have the right text color */
+        [data-theme="dark"] .chart-container {
+            color: var(--text-color) !important;
         }
 
         @media (max-width: 768px) {
@@ -317,7 +341,7 @@
 </head>
 <body>
     <header>
-        <h1>InfoScope</h1>
+        <h1>InfoScope-DW</h1>
         <p class="subtitle">Your comprehensive browser and system information</p>
     </header>
 
@@ -615,7 +639,7 @@
                     Browser Usage Data
                 </h2>
                 <div class="chart-container">
-                    <canvas id="browser-chart"></canvas>
+                    <div id="browser-chart"></div>
                 </div>
             </div>
             
@@ -626,7 +650,7 @@
                     Hardware Performance
                 </h2>
                 <div class="chart-container">
-                    <canvas id="performance-chart"></canvas>
+                    <div id="performance-chart"></div>
                 </div>
             </div>
             
@@ -668,7 +692,7 @@
     </div>
 
     <footer>
-        <p>&copy; 2025 InfoScope. All rights reserved.</p>
+        <p>&copy; 2025 InfoScope by D. Weeks. All rights reserved.</p>
     </footer>
     
     <!-- Dark Mode Toggle -->
@@ -1969,54 +1993,135 @@
         
         // Initialize charts
         function initializeCharts() {
+            // Determine if we're in dark mode
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDarkMode ? '#FFFFFF' : getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            
             // Browser usage chart
-            const browserCtx = document.getElementById('browser-chart').getContext('2d');
-            const browserChart = new Chart(browserCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Chrome', 'Safari', 'Firefox', 'Edge', 'Opera', 'Other'],
-                    datasets: [{
-                        data: [65, 14, 12, 5, 3, 1], // Global browser market share (approximate)
-                        backgroundColor: [
-                            '#4285F4', // Chrome blue
-                            '#34A853', // Safari green
-                            '#FF9900', // Firefox orange
-                            '#0078D7', // Edge blue
-                            '#FF1B2D', // Opera red
-                            '#AAAAAA'  // Other gray
-                        ],
-                        borderColor: [
-                            'rgba(255, 255, 255, 0.5)',
-                            'rgba(255, 255, 255, 0.5)',
-                            'rgba(255, 255, 255, 0.5)',
-                            'rgba(255, 255, 255, 0.5)',
-                            'rgba(255, 255, 255, 0.5)',
-                            'rgba(255, 255, 255, 0.5)'
-                        ],
-                        borderWidth: 1
-                    }]
+            const browserChartOptions = {
+                series: [65, 14, 12, 5, 3, 1], // Global browser market share (approximate)
+                chart: {
+                    type: 'donut',
+                    height: 250,
+                    fontFamily: 'Share Tech Mono, monospace',
+                    foreColor: textColor,
+                    animations: {
+                        enabled: true,
+                        dynamicAnimation: {
+                            enabled: true
+                        }
+                    },
+                    dropShadow: {
+                        enabled: false
+                    },
+                    textShadow: {
+                        enabled: false
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
+                labels: ['Chrome', 'Safari', 'Firefox', 'Edge', 'Opera', 'Other'],
+                colors: [
+                    '#4285F4', // Chrome blue
+                    '#34A853', // Safari green
+                    '#FF9900', // Firefox orange
+                    '#0078D7', // Edge blue
+                    '#FF1B2D', // Opera red
+                    '#AAAAAA'  // Other gray
+                ],
+                title: {
+                    text: 'Global Browser Market Share (2025)',
+                    align: 'center',
+                    style: {
+                        fontSize: '14px',
+                        fontFamily: 'Share Tech Mono, monospace',
+                        fontWeight: isDarkMode ? 'bold' : 'normal',
+                        color: textColor,
+                        textShadow: 'none'
+                    }
+                },
+                legend: {
+                    position: 'right',
+                    fontFamily: 'Share Tech Mono, monospace',
+                    labels: {
+                        colors: textColor,
+                        useSeriesColors: false
+                    },
+                    markers: {
+                        width: 12,
+                        height: 12,
+                        strokeWidth: 0,
+                        radius: 12,
+                        offsetX: 0,
+                        offsetY: 0
+                    },
+                    itemMargin: {
+                        horizontal: 5,
+                        vertical: 4
+                    },
+                    onItemClick: {
+                        toggleDataSeries: true
+                    }
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
                             labels: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
+                                show: true,
+                                name: {
+                                    show: true,
+                                    color: textColor
+                                },
+                                value: {
+                                    show: true,
+                                    color: textColor
+                                },
+                                total: {
+                                    show: true,
+                                    color: textColor
+                                }
                             }
-                        },
-                        title: {
-                            display: true,
-                            text: 'Global Browser Market Share (2025)',
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
                         }
                     }
-                }
-            });
+                },
+                stroke: {
+                    width: isDarkMode ? 2 : 1,
+                    colors: Array(6).fill('rgba(255, 255, 255, 0.7)')
+                },
+                dataLabels: {
+                    style: {
+                        colors: [textColor],
+                        fontSize: '12px',
+                        fontFamily: 'Share Tech Mono, monospace',
+                        fontWeight: 'normal',
+                        textShadow: 'none'
+                    },
+                    background: {
+                        enabled: true,
+                        foreColor: textColor,
+                        borderRadius: 2,
+                        padding: 4,
+                        opacity: 0.7,
+                        borderWidth: 1,
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'
+                    }
+                },
+                responsive: [{
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            height: 250
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
+            };
+
+            const browserChart = new ApexCharts(document.querySelector("#browser-chart"), browserChartOptions);
+            browserChart.render();
             
             // Hardware performance chart - uses realtime values from the user's system
-            const performanceCtx = document.getElementById('performance-chart').getContext('2d');
             
             // We'll use real data where available
             const cpuCores = navigator.hardwareConcurrency || 4;
@@ -2031,90 +2136,157 @@
                 downloadSpeed = navigator.connection.downlink;
             }
             
-            const performanceChart = new Chart(performanceCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['CPU Cores', 'RAM (GB)', 'Download Speed (Mbps)'],
-                    datasets: [{
-                        label: 'Your System',
-                        data: [cpuCores, memoryGB, downloadSpeed],
-                        backgroundColor: [
-                            'rgba(75, 192, 192, 0.7)',
-                            'rgba(153, 102, 255, 0.7)',
-                            'rgba(255, 159, 64, 0.7)'
-                        ],
-                        borderColor: [
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)',
-                            'rgba(255, 159, 64, 1)'
-                        ],
-                        borderWidth: 1
-                    }, {
-                        label: 'Average System',
-                        data: [6, 8, 100],
-                        backgroundColor: 'rgba(201, 203, 207, 0.5)',
-                        borderColor: 'rgba(201, 203, 207, 0.8)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
-                            }
-                        },
-                        title: {
-                            display: true,
-                            text: 'Hardware Performance Comparison',
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
+            const performanceChartOptions = {
+                series: [{
+                    name: 'Your System',
+                    data: [cpuCores, memoryGB, downloadSpeed]
+                }, {
+                    name: 'Average System',
+                    data: [6, 8, 100]
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 250,
+                    fontFamily: 'Share Tech Mono, monospace',
+                    foreColor: textColor,
+                    animations: {
+                        enabled: true,
+                        dynamicAnimation: {
+                            enabled: true
                         }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--border-color')
-                            },
-                            ticks: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
-                            }
-                        },
-                        x: {
-                            grid: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--border-color')
-                            },
-                            ticks: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
-                            }
+                    dropShadow: {
+                        enabled: false
+                    },
+                    textShadow: {
+                        enabled: false
+                    }
+                },
+                colors: ['#5d8adb', '#a0a0a0'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '55%',
+                        borderRadius: 4
+                    },
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    show: true,
+                    width: 2,
+                    colors: ['transparent']
+                },
+                xaxis: {
+                    categories: ['CPU Cores', 'RAM (GB)', 'Download Speed (Mbps)'],
+                    labels: {
+                        style: {
+                            colors: Array(3).fill(textColor),
+                            fontFamily: 'Share Tech Mono, monospace'
+                        }
+                    },
+                    axisBorder: {
+                        show: true,
+                        color: gridColor
+                    },
+                    axisTicks: {
+                        show: true,
+                        color: gridColor
+                    }
+                },
+                yaxis: {
+                    title: {
+                        text: 'Value',
+                        style: {
+                            color: textColor,
+                            fontFamily: 'Share Tech Mono, monospace'
+                        }
+                    },
+                    labels: {
+                        style: {
+                            colors: [textColor],
+                            fontFamily: 'Share Tech Mono, monospace'
                         }
                     }
+                },
+                title: {
+                    text: 'Hardware Performance Comparison',
+                    align: 'center',
+                    style: {
+                        fontSize: '14px',
+                        fontFamily: 'Share Tech Mono, monospace',
+                        fontWeight: isDarkMode ? 'bold' : 'normal',
+                        color: textColor,
+                        textShadow: 'none'
+                    }
+                },
+                legend: {
+                    position: 'top',
+                    fontFamily: 'Share Tech Mono, monospace',
+                    labels: {
+                        colors: textColor,
+                        useSeriesColors: false
+                    },
+                    markers: {
+                        width: 12,
+                        height: 12,
+                        strokeWidth: 0,
+                        radius: 3,
+                        offsetX: 0,
+                        offsetY: 0
+                    },
+                    itemMargin: {
+                        horizontal: 5,
+                        vertical: 4
+                    },
+                    onItemClick: {
+                        toggleDataSeries: true
+                    }
+                },
+                grid: {
+                    borderColor: gridColor,
+                    row: {
+                        colors: [isDarkMode ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)']
+                    }
+                },
+                tooltip: {
+                    theme: isDarkMode ? 'dark' : 'light',
+                    style: {
+                        fontSize: '12px',
+                        fontFamily: 'Share Tech Mono, monospace'
+                    },
+                    y: {
+                        formatter: function (val) {
+                            return val.toString()
+                        }
+                    },
+                    marker: {
+                        show: true
+                    }
                 }
-            });
+            };
+
+            const performanceChart = new ApexCharts(document.querySelector("#performance-chart"), performanceChartOptions);
+            performanceChart.render();
             
             // Update chart colors when theme changes
             document.getElementById('theme-toggle').addEventListener('click', () => {
                 setTimeout(() => {
-                    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
-                    const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+                    // After theme is toggled, reinitialize charts to reflect the new theme
                     
-                    // Update browser chart
-                    browserChart.options.plugins.legend.labels.color = textColor;
-                    browserChart.options.plugins.title.color = textColor;
-                    browserChart.update();
+                    // First destroy existing charts if they exist
+                    if (browserChart) {
+                        browserChart.destroy();
+                    }
+                    if (performanceChart) {
+                        performanceChart.destroy();
+                    }
                     
-                    // Update performance chart
-                    performanceChart.options.plugins.legend.labels.color = textColor;
-                    performanceChart.options.plugins.title.color = textColor;
-                    performanceChart.options.scales.y.grid.color = borderColor;
-                    performanceChart.options.scales.x.grid.color = borderColor;
-                    performanceChart.options.scales.y.ticks.color = textColor;
-                    performanceChart.options.scales.x.ticks.color = textColor;
-                    performanceChart.update();
-                }, 100); // Small delay to ensure theme has changed
+                    // Reinitialize charts with updated theme
+                    initializeCharts();
+                    
+                }, 200); // Small delay to ensure theme has changed
             });
         }
         
