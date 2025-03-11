@@ -469,7 +469,7 @@
     <div class="container">
         <!-- Browser Cache Dashboard - Full Width -->
         <div class="cache-dashboard">
-            <h2 class="cache-dashboard-title">Browser Cache Dashboard</h2>
+            <h2 class="cache-dashboard-title">Current Tab Cache Dashboard</h2>
             <div class="tabs-cache-info" id="tabs-cache-info">
                 <div class="shimmer" style="height: 2rem;"></div>
             </div>
@@ -2475,49 +2475,17 @@
                 id: 'current-tab'
             };
             
-            // In real-world environments, create a mock list of browser tabs with unique IDs
-            // In a real extension, we would get this from browser.tabs API
+            // Only show the current tab since we can't access information about other tabs
+            // without browser extension permissions
             globalBrowserTabs = [
                 {
                     id: 'tab-1',
-                    title: currentTab.title + ' (THIS TAB)',
+                    title: currentTab.title,
                     url: currentTab.url,
                     active: true,
                     isCurrent: true
                 }
             ];
-            
-            // Always add demo tabs to show functionality and provide more cache examples
-            globalBrowserTabs.push(
-                {
-                    id: 'tab-2',
-                    title: 'Google - Browser Information Search',
-                    url: 'https://www.google.com/search?q=browser+information',
-                    active: true,
-                    isCurrent: false
-                },
-                {
-                    id: 'tab-3',
-                    title: 'MDN Web Docs - Browser APIs',
-                    url: 'https://developer.mozilla.org/en-US/docs/Web/API',
-                    active: false,
-                    isCurrent: false
-                },
-                {
-                    id: 'tab-4',
-                    title: 'YouTube - Web Development Tutorial',
-                    url: 'https://youtube.com/watch?v=web-dev-tutorial',
-                    active: true,
-                    isCurrent: false
-                },
-                {
-                    id: 'tab-5',
-                    title: 'Amazon Shopping - Your Cart',
-                    url: 'https://amazon.com/cart',
-                    active: true,
-                    isCurrent: false
-                }
-            );
             
             // Feature detection for Cache API
             if ('caches' in window) {
@@ -2851,40 +2819,11 @@
             }
         }
         
-        // Helper function to distribute caches among tabs
+        // Helper function to get caches for the current tab
         function getCachesForTab(tab, allCacheNames) {
-            // In a real extension with browser.tabs API, we could match
-            // caches to tabs based on URLs or origin patterns
-            
-            // For demo purposes, we'll distribute caches among tabs
-            // using a deterministic pattern
-            
-            // Current tab gets caches containing "page" or the current domain
-            if (tab.isCurrent) {
-                return allCacheNames.filter(name => {
-                    const urlDomain = (new URL(tab.url)).hostname;
-                    return name.includes('page') || 
-                           name.includes(urlDomain) || 
-                           Math.random() > 0.6; // Add some randomness
-                });
-            }
-            
-            // For other tabs, assign caches with matching keywords from title/URL
-            // or based on tab ID for demo consistency
-            const keywords = tab.title.toLowerCase().split(' ');
-            const tabIndex = parseInt(tab.id.replace('tab-', ''));
-            
-            return allCacheNames.filter((name, index) => {
-                // Match by keyword
-                const keywordMatch = keywords.some(keyword => 
-                    name.toLowerCase().includes(keyword)
-                );
-                
-                // Or use modulo distribution for demo purposes
-                const indexMatch = (index % globalBrowserTabs.length) === (tabIndex % globalBrowserTabs.length);
-                
-                return keywordMatch || indexMatch;
-            });
+            // Since we only have one tab (the current one),
+            // return all available caches
+            return allCacheNames;
         }
         
         // Format bytes to human-readable string
