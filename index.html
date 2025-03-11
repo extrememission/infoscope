@@ -285,6 +285,86 @@
             margin-top: 1rem;
         }
         
+        /* Browser Cache Dashboard styles */
+        .cache-dashboard {
+            background: linear-gradient(135deg, #6a85b6 0%, #bac8e0 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        [data-theme="dark"] .cache-dashboard {
+            background: linear-gradient(135deg, #304878 0%, #4e6491 100%);
+        }
+        
+        .cache-dashboard-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.2rem;
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .tabs-cache-info {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .tabs-cache-item {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+        
+        .tabs-cache-item:hover {
+            transform: translateY(-2px);
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .tabs-cache-name {
+            font-weight: 700;
+            margin-right: 1rem;
+        }
+        
+        .tabs-cache-state {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        .state-active {
+            background-color: #4ade80;
+            color: #064e3b;
+        }
+        
+        .state-inactive {
+            background-color: #f87171;
+            color: #7f1d1d;
+        }
+        
+        .tabs-cache-size {
+            float: right;
+            font-weight: 600;
+        }
+        
+        .cache-storage-summary {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-top: 1rem;
+        }
+        
         /* Make sure ApexCharts works well in dark mode */
         [data-theme="dark"] .apexcharts-legend-text,
         [data-theme="dark"] .apexcharts-text,
@@ -387,6 +467,17 @@
     </header>
 
     <div class="container">
+        <!-- Browser Cache Dashboard - Full Width -->
+        <div class="cache-dashboard">
+            <h2 class="cache-dashboard-title">Browser Cache Dashboard</h2>
+            <div class="tabs-cache-info" id="tabs-cache-info">
+                <div class="shimmer" style="height: 2rem;"></div>
+            </div>
+            <div class="cache-storage-summary" id="cache-storage-summary">
+                <div class="shimmer" style="height: 1.5rem; margin-top: 1rem;"></div>
+            </div>
+        </div>
+        
         <div class="cards-container">
             <!-- Location Information Card -->
             <div class="card">
@@ -2372,8 +2463,152 @@
             });
         }
         
+        // Function to get browser cache information
+        function getBrowserCacheInfo() {
+            const tabsCacheContainer = document.getElementById('tabs-cache-info');
+            const cacheStorageSummary = document.getElementById('cache-storage-summary');
+            
+            // Feature detection for Cache API
+            if ('caches' in window) {
+                caches.keys().then(cacheNames => {
+                    if (cacheNames.length === 0) {
+                        tabsCacheContainer.innerHTML = 
+                            `<div class="tabs-cache-item">No browser caches found</div>`;
+                        return;
+                    }
+                    
+                    let totalCacheSize = 0;
+                    let cacheHTML = '';
+                    let cachePromises = [];
+                    
+                    // Process each cache store
+                    cacheNames.forEach(cacheName => {
+                        const cachePromise = caches.open(cacheName)
+                            .then(cache => {
+                                return cache.matchAll().then(responses => {
+                                    let cacheSize = 0;
+                                    let active = true;
+                                    
+                                    // For simplicity, consider the cache active if it has items
+                                    if (responses.length === 0) {
+                                        active = false;
+                                    }
+                                    
+                                    // Estimate size based on responses
+                                    const sizePromises = responses.map(response => {
+                                        return response.clone().blob().then(blob => {
+                                            return blob.size;
+                                        }).catch(() => 0);
+                                    });
+                                    
+                                    return Promise.all(sizePromises).then(sizes => {
+                                        cacheSize = sizes.reduce((acc, size) => acc + size, 0);
+                                        totalCacheSize += cacheSize;
+                                        
+                                        // Create HTML item for this cache
+                                        return {
+                                            name: cacheName,
+                                            size: formatBytes(cacheSize),
+                                            active: active,
+                                            items: responses.length
+                                        };
+                                    });
+                                });
+                            }).catch(err => {
+                                console.error('Error accessing cache:', err);
+                                return {
+                                    name: cacheName,
+                                    size: 'Unknown',
+                                    active: false,
+                                    items: 0,
+                                    error: true
+                                };
+                            });
+                            
+                        cachePromises.push(cachePromise);
+                    });
+                    
+                    // When all caches are processed
+                    Promise.all(cachePromises).then(cacheDetails => {
+                        cacheDetails.forEach(cache => {
+                            const stateClass = cache.active ? 'state-active' : 'state-inactive';
+                            const stateText = cache.active ? 'Active' : 'Inactive';
+                            
+                            cacheHTML += `
+                                <div class="tabs-cache-item">
+                                    <span class="tabs-cache-name">${cache.name}</span>
+                                    <span class="tabs-cache-state ${stateClass}">${stateText}</span>
+                                    <span class="tabs-cache-size">${cache.size}</span>
+                                    <div>Contains ${cache.items} item${cache.items !== 1 ? 's' : ''}</div>
+                                    ${cache.error ? '<div style="color: #f87171;">Error accessing this cache</div>' : ''}
+                                </div>
+                            `;
+                        });
+                        
+                        tabsCacheContainer.innerHTML = cacheHTML;
+                        cacheStorageSummary.textContent = `Total Browser Cache: ${formatBytes(totalCacheSize)} across ${cacheNames.length} cache${cacheNames.length !== 1 ? 's' : ''}`;
+                    }).catch(err => {
+                        console.error('Error processing caches:', err);
+                        tabsCacheContainer.innerHTML = 
+                            `<div class="tabs-cache-item">Error accessing browser caches</div>`;
+                    });
+                }).catch(err => {
+                    console.error('Error listing caches:', err);
+                    tabsCacheContainer.innerHTML = 
+                        `<div class="tabs-cache-item">Error accessing browser caches: ${err.message}</div>`;
+                });
+            } else {
+                // Browser doesn't support Cache API
+                tabsCacheContainer.innerHTML = 
+                    `<div class="tabs-cache-item">
+                        Your browser doesn't support the Cache API, so detailed cache information cannot be shown.
+                        <br><br>
+                        <strong>Alternative information:</strong>
+                        <div style="margin-top: 0.5rem;">
+                            Cache Control Headers: ${document.querySelector('meta[http-equiv="cache-control"]')?.content || 'None detected'}
+                        </div>
+                        <div style="margin-top: 0.5rem;">
+                            Estimated Storage Usage: Calculating...
+                        </div>
+                    </div>`;
+                
+                // Try to estimate using the Storage API
+                if ('storage' in navigator && 'estimate' in navigator.storage) {
+                    navigator.storage.estimate().then(estimate => {
+                        const usage = formatBytes(estimate.usage || 0);
+                        const quota = formatBytes(estimate.quota || 0);
+                        const percent = estimate.quota ? Math.round((estimate.usage / estimate.quota) * 100) : 0;
+                        
+                        cacheStorageSummary.innerHTML = 
+                            `Storage Usage: ${usage} of ${quota} (${percent}% used)`;
+                    }).catch(err => {
+                        console.error('Storage estimation error:', err);
+                        cacheStorageSummary.textContent = 'Storage information unavailable';
+                    });
+                } else {
+                    cacheStorageSummary.textContent = 'Browser storage information unavailable';
+                }
+            }
+        }
+        
+        // Format bytes to human-readable string
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0 || !bytes) return '0 Bytes';
+            
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+            
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+        
         // Initialize all functions
         function initializeInfo() {
+            // Initialize browser cache dashboard
+            getBrowserCacheInfo();
+            
             // Load system information
             loadIpInfo();
             detectOS();
