@@ -2480,32 +2480,44 @@
             globalBrowserTabs = [
                 {
                     id: 'tab-1',
-                    title: currentTab.title,
+                    title: currentTab.title + ' (THIS TAB)',
                     url: currentTab.url,
                     active: true,
                     isCurrent: true
                 }
             ];
             
-            // Add some demo tabs if this is the only tab to show functionality
-            if (Math.random() > 0.5) {
-                globalBrowserTabs.push(
-                    {
-                        id: 'tab-2',
-                        title: 'Search Results',
-                        url: 'https://www.google.com/search?q=browser+information',
-                        active: true,
-                        isCurrent: false
-                    },
-                    {
-                        id: 'tab-3',
-                        title: 'Documentation',
-                        url: 'https://developer.mozilla.org/en-US/docs/Web/API',
-                        active: false,
-                        isCurrent: false
-                    }
-                );
-            }
+            // Always add demo tabs to show functionality and provide more cache examples
+            globalBrowserTabs.push(
+                {
+                    id: 'tab-2',
+                    title: 'Google - Browser Information Search',
+                    url: 'https://www.google.com/search?q=browser+information',
+                    active: true,
+                    isCurrent: false
+                },
+                {
+                    id: 'tab-3',
+                    title: 'MDN Web Docs - Browser APIs',
+                    url: 'https://developer.mozilla.org/en-US/docs/Web/API',
+                    active: false,
+                    isCurrent: false
+                },
+                {
+                    id: 'tab-4',
+                    title: 'YouTube - Web Development Tutorial',
+                    url: 'https://youtube.com/watch?v=web-dev-tutorial',
+                    active: true,
+                    isCurrent: false
+                },
+                {
+                    id: 'tab-5',
+                    title: 'Amazon Shopping - Your Cart',
+                    url: 'https://amazon.com/cart',
+                    active: true,
+                    isCurrent: false
+                }
+            );
             
             // Feature detection for Cache API
             if ('caches' in window) {
